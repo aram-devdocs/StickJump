@@ -7,6 +7,7 @@ using System.Threading;
 using GameShared;
 using Microsoft.Xna.Framework;
 using System.Text;
+using System.IO;
 
 namespace GameServer
 {
@@ -21,8 +22,6 @@ namespace GameServer
         static void Main(string[] args)
         {
             Console.WriteLine("Starting server...");
-
-
             _listener.Start();
 
             Thread acceptClientsThread = new Thread(AcceptClients);
@@ -66,16 +65,39 @@ namespace GameServer
         private static void HandleClient(TcpClient client, int playerId)
         {
             NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
+
+            // Send the player ID to the client
+            StreamWriter writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+            writer.AutoFlush = true;
+            writer.WriteLine(playerId.ToString());
 
             while (client.Connected)
             {
                 try
                 {
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) continue;
+                    // Read the length prefix
+                    byte[] lengthPrefix = new byte[4];
+                    int bytesReceived = 0;
+                    while (bytesReceived < 4)
+                    {
+                        int read = stream.Read(lengthPrefix, bytesReceived, 4 - bytesReceived);
+                        if (read == 0) throw new Exception("Disconnected");
+                        bytesReceived += read;
+                    }
 
-                    string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    int messageLength = BitConverter.ToInt32(lengthPrefix, 0);
+
+                    // Read the full message
+                    byte[] messageData = new byte[messageLength];
+                    bytesReceived = 0;
+                    while (bytesReceived < messageLength)
+                    {
+                        int read = stream.Read(messageData, bytesReceived, messageLength - bytesReceived);
+                        if (read == 0) throw new Exception("Disconnected");
+                        bytesReceived += read;
+                    }
+
+                    string data = Encoding.UTF8.GetString(messageData);
                     var playerInput = Serializer.Deserialize<PlayerInput>(data);
 
                     lock (_lock)
@@ -158,7 +180,9 @@ namespace GameServer
         private static void BroadcastGameState()
         {
             string gameStateJson = Serializer.Serialize(_gameState);
-            byte[] data = Encoding.UTF8.GetBytes(gameStateJson);
+            byte[] jsonData = Encoding.UTF8.GetBytes(gameStateJson);
+            int dataLength = jsonData.Length;
+            byte[] lengthPrefix = BitConverter.GetBytes(dataLength);
 
             List<int> disconnectedPlayers = new List<int>();
 
@@ -167,7 +191,8 @@ namespace GameServer
                 try
                 {
                     NetworkStream stream = kvp.Value.GetStream();
-                    stream.Write(data, 0, data.Length);
+                    stream.Write(lengthPrefix, 0, lengthPrefix.Length);
+                    stream.Write(jsonData, 0, jsonData.Length);
                 }
                 catch (Exception)
                 {

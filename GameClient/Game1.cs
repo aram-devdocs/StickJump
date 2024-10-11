@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using GameShared;
 using System.Text;
+using System.IO;
 
 namespace GameClient
 {
@@ -45,6 +46,12 @@ namespace GameClient
             {
                 _client = new TcpClient("127.0.0.1", 5001);
                 _stream = _client.GetStream();
+
+                // Read the player ID from the server
+                StreamReader reader = new StreamReader(_stream, Encoding.UTF8, false, 1024, true);
+                string idString = reader.ReadLine();
+                _playerId = int.Parse(idString);
+                Console.WriteLine($"Assigned Player ID: {_playerId}");
 
                 // Start receiving game state
                 _receiveThread = new Thread(ReceiveGameState);
@@ -93,10 +100,13 @@ namespace GameClient
 
             // Send input to server
             string inputJson = Serializer.Serialize(input);
-            byte[] data = Encoding.UTF8.GetBytes(inputJson);
+            byte[] inputData = Encoding.UTF8.GetBytes(inputJson);
             try
             {
-                _stream.Write(data, 0, data.Length);
+                // Send length-prefixed input
+                byte[] lengthPrefix = BitConverter.GetBytes(inputData.Length);
+                _stream.Write(lengthPrefix, 0, lengthPrefix.Length);
+                _stream.Write(inputData, 0, inputData.Length);
             }
             catch (Exception ex)
             {
@@ -109,15 +119,33 @@ namespace GameClient
 
         private void ReceiveGameState()
         {
-            byte[] buffer = new byte[1024 * 10];
             while (_client.Connected && _keepRunning)
             {
                 try
                 {
-                    int bytesRead = _stream.Read(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) continue;
+                    // Read the length prefix
+                    byte[] lengthPrefix = new byte[4];
+                    int bytesReceived = 0;
+                    while (bytesReceived < 4)
+                    {
+                        int read = _stream.Read(lengthPrefix, bytesReceived, 4 - bytesReceived);
+                        if (read == 0) throw new Exception("Disconnected");
+                        bytesReceived += read;
+                    }
 
-                    string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    int messageLength = BitConverter.ToInt32(lengthPrefix, 0);
+
+                    // Read the full message
+                    byte[] messageData = new byte[messageLength];
+                    bytesReceived = 0;
+                    while (bytesReceived < messageLength)
+                    {
+                        int read = _stream.Read(messageData, bytesReceived, messageLength - bytesReceived);
+                        if (read == 0) throw new Exception("Disconnected");
+                        bytesReceived += read;
+                    }
+
+                    string data = Encoding.UTF8.GetString(messageData);
                     var gameState = Serializer.Deserialize<GameState>(data);
 
                     if (gameState != null)
