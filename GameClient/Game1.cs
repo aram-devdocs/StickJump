@@ -86,7 +86,7 @@ namespace GameClient
             _obstacleTexture.SetData(obstacleData);
 
             // Load font
-            _font = Content.Load<SpriteFont>("ScoreFont");
+            _font = Content.Load<SpriteFont>("Default");
         }
 
         protected override void Update(GameTime gameTime)
@@ -211,12 +211,12 @@ namespace GameClient
             // Prepare the score table text
             StringBuilder scoreText = new StringBuilder();
             scoreText.AppendLine("Scores:");
-            scoreText.AppendLine("Player\tScore\tMax");
+            scoreText.AppendLine("Player  Score  Max");
 
             foreach (var player in _gameState.Players.Values)
             {
                 string playerIndicator = (player.PlayerId == _playerId) ? "*" : "";
-                scoreText.AppendLine($"{playerIndicator}{player.PlayerId}\t{player.CurrentScore}\t{player.MaxScore}");
+                scoreText.AppendLine($"{playerIndicator}{player.PlayerId}      {player.CurrentScore}      {player.MaxScore}");
             }
 
             // Draw the text
