@@ -34,11 +34,13 @@ namespace GameClient
         private Texture2D _pipeTexture;
         private Dictionary<string, Texture2D> _birdTextures;
         private SpriteFont _font;
-        private Vector2 _scoreTablePosition = new Vector2(600, 10); // Top-right corner
+        private Vector2 _scoreTablePosition = new Vector2(10, 10);
 
         // Animation
         private double _animationTimer;
         private int _animationFrame;
+
+        private Dictionary<int, Texture2D> _numberTextures;
 
         public Game1()
         {
@@ -74,13 +76,18 @@ namespace GameClient
 
             base.Initialize();
         }
-
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // Load textures
+            // Load background texture and set the window size to match
             _backgroundTexture = Content.Load<Texture2D>("sprites/background-day");
+
+            // Set the screen size to match the background texture size
+            _graphics.PreferredBackBufferWidth = _backgroundTexture.Width;
+            _graphics.PreferredBackBufferHeight = _backgroundTexture.Height;
+            _graphics.ApplyChanges();
+
             _baseTexture = Content.Load<Texture2D>("sprites/base");
             _pipeTexture = Content.Load<Texture2D>("sprites/pipe-green");
 
@@ -94,6 +101,13 @@ namespace GameClient
 
             // Load font
             _font = Content.Load<SpriteFont>("Default");
+
+            // Load number textures (0-9)
+            _numberTextures = new Dictionary<int, Texture2D>();
+            for (int i = 0; i <= 9; i++)
+            {
+                _numberTextures[i] = Content.Load<Texture2D>($"sprites/{i}");
+            }
         }
 
         protected override void Update(GameTime gameTime)
@@ -191,6 +205,23 @@ namespace GameClient
             Exit();
         }
 
+
+
+        private static string ConvertColorEnumToString(Colors color)
+        {
+            switch (color)
+            {
+                case Colors.Yellow:
+                    return "yellow";
+                case Colors.Blue:
+                    return "blue";
+                case Colors.Red:
+                    return "red";
+                default:
+                    return "yellow";
+            }
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
@@ -205,7 +236,6 @@ namespace GameClient
                 // Draw pipes
                 foreach (var obstacle in _gameState.Obstacles)
                 {
-                    // Upper pipe
                     _spriteBatch.Draw(
                         _pipeTexture,
                         new Rectangle((int)obstacle.Position.X, (int)(obstacle.Position.Y - 75 - 320), 52, 320),
@@ -216,7 +246,6 @@ namespace GameClient
                         SpriteEffects.FlipVertically,
                         0);
 
-                    // Lower pipe
                     _spriteBatch.Draw(
                         _pipeTexture,
                         new Vector2(obstacle.Position.X, obstacle.Position.Y + 75),
@@ -224,20 +253,25 @@ namespace GameClient
                 }
 
                 // Draw base
-                _spriteBatch.Draw(_baseTexture, new Vector2(0, 512 - 112), Color.White);
+                _spriteBatch.Draw(_baseTexture, new Vector2(0, _graphics.PreferredBackBufferHeight - 112), Color.White);
 
                 // Draw players
                 foreach (var player in _gameState.Players.Values)
                 {
-                    // Determine bird texture
-                    Texture2D birdTexture = _birdTextures[player.Color];
-
-                    // Apply animation frames if desired
+                    Texture2D birdTexture = _birdTextures[ConvertColorEnumToString(player.Color)];
                     _spriteBatch.Draw(birdTexture, player.Position, Color.White);
+
+                    // Display countdown if player is in cooldown
+                    if (player.PlayerId == _playerId && player.CollisionCooldown > 0)
+                    {
+                        string countdownText = Math.Ceiling(player.CollisionCooldown).ToString();
+                        _spriteBatch.DrawString(_font, countdownText, new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2), Color.Red);
+                    }
                 }
 
-                // Draw score table
+                // Draw score table and player score using number sprites
                 DrawScoreTable();
+                DrawPlayerScore(_gameState.Players[_playerId].CurrentScore, new Vector2(_graphics.PreferredBackBufferWidth / 2 - 50, 20));
 
                 _spriteBatch.End();
             }
@@ -245,6 +279,19 @@ namespace GameClient
             base.Draw(gameTime);
         }
 
+
+        private void DrawPlayerScore(int score, Vector2 position)
+        {
+            // Convert the score to a string and draw each digit using the number textures
+            string scoreStr = score.ToString();
+            float offsetX = 0;
+            foreach (char digit in scoreStr)
+            {
+                int digitValue = digit - '0';
+                _spriteBatch.Draw(_numberTextures[digitValue], new Vector2(position.X + offsetX, position.Y), Color.White);
+                offsetX += _numberTextures[digitValue].Width + 5; // Adjust spacing between digits
+            }
+        }
         private void DrawScoreTable()
         {
             // Prepare the score table text

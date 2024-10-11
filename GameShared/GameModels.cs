@@ -14,13 +14,12 @@ namespace GameShared
         public int PlayerId { get; set; }
         public Vector2 Position { get; set; }
         public bool IsJumping { get; set; }
-
-        // Add these properties
         public int CurrentScore { get; set; }
         public int MaxScore { get; set; }
+        public Colors Color { get; set; }
 
-        // New property for player color
-        public string Color { get; set; }
+        // New field: Countdown timer
+        public float CollisionCooldown { get; set; }
     }
 
     public class Obstacle
@@ -34,4 +33,7 @@ namespace GameShared
         public List<Obstacle> Obstacles { get; set; } = new List<Obstacle>();
         public Dictionary<int, PlayerState> Players { get; set; } = new Dictionary<int, PlayerState>();
     }
+
+        public enum Colors { Yellow = 'y', Blue = 'b', Red = 'r' };
+
 }

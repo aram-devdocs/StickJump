@@ -18,7 +18,10 @@ namespace GameServer
         private static int _nextPlayerId = 1;
         private static object _lock = new object();
 
-        private static readonly string[] BirdColors = { "yellow", "blue", "red" };
+
+        // private static readonly string[] BirdColors = { "yellow", "blue", "red" };
+
+        private static readonly Colors[] BirdColors = { Colors.Yellow, Colors.Blue, Colors.Red };
 
         static void Main(string[] args)
         {
@@ -48,8 +51,9 @@ namespace GameServer
                 int playerId = _nextPlayerId++;
                 lock (_lock)
                 {
-                    // Assign a color to the player
-                    string color = BirdColors[(playerId - 1) % BirdColors.Length];
+                    Colors color = BirdColors[(playerId - 1) % BirdColors.Length];
+
+
 
                     _clients.Add(playerId, client);
                     _gameState.Players.Add(playerId, new PlayerState
@@ -59,7 +63,7 @@ namespace GameServer
                         IsJumping = false,
                         CurrentScore = 0,
                         MaxScore = 0,
-                        Color = color
+                        Color = color,
                     });
                 }
                 Console.WriteLine($"Player {playerId} connected.");
@@ -68,6 +72,7 @@ namespace GameServer
                 clientThread.Start();
             }
         }
+
 
         private static void HandleClient(TcpClient client, int playerId)
         {
@@ -147,11 +152,8 @@ namespace GameServer
             // Add new obstacle if needed
             if (_gameState.Obstacles.Count == 0 || _gameState.Obstacles[^1].Position.X < 400)
             {
-                // Randomize pipe gap position
                 Random rand = new Random();
                 int gapY = rand.Next(150, 350);
-
-                // Add upper and lower pipes as a single obstacle for simplicity
                 _gameState.Obstacles.Add(new Obstacle
                 {
                     Position = new Vector2(800, gapY),
@@ -162,6 +164,12 @@ namespace GameServer
             // Update players
             foreach (var player in _gameState.Players.Values)
             {
+                // Decrease collision cooldown timer
+                if (player.CollisionCooldown > 0)
+                {
+                    player.CollisionCooldown -= 1f / 60f; // Assuming 60 FPS
+                }
+
                 var position = player.Position;
 
                 if (player.IsJumping)
@@ -188,13 +196,15 @@ namespace GameServer
                 // Reset jumping state
                 player.IsJumping = false;
 
-                // Check for collisions
-                if (CheckCollisions(player))
+                // Check for collisions if the cooldown is over
+                if (player.CollisionCooldown <= 0 && CheckCollisions(player))
                 {
                     // Collision detected, reset player's score
                     player.CurrentScore = 0;
-                    // Reset player position
+
+                    // Reset player position and start a new cooldown
                     player.Position = new Vector2(100, 300);
+                    player.CollisionCooldown = 3; // 3 seconds cooldown
                     Console.WriteLine($"Player {player.PlayerId} collided with an obstacle.");
                 }
                 else
@@ -217,7 +227,6 @@ namespace GameServer
                 }
             }
         }
-
         private static bool CheckCollisions(PlayerState player)
         {
             foreach (var obstacle in _gameState.Obstacles)
@@ -230,6 +239,22 @@ namespace GameServer
 
                 // Define lower pipe rectangle
                 Rectangle lowerPipeRect = new Rectangle((int)obstacle.Position.X, (int)obstacle.Position.Y + 75, 52, 600 - ((int)obstacle.Position.Y + 75));
+
+                // Create a rectangle for the Base.png
+                // Rectangle baseRect = new Rectangle(0, 480, 800, 20);
+                // 4x the height
+                Rectangle baseRect = new Rectangle(0, 480, 800, 300);
+
+
+                // Check for collision with base
+                if (birdRect.Intersects(baseRect))
+                {
+                    return true;
+                }
+
+
+
+                // Check for collision with pipes
 
                 if (birdRect.Intersects(upperPipeRect) || birdRect.Intersects(lowerPipeRect))
                 {
