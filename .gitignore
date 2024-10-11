@@ -1,20 +1,21 @@
-# Build directories
-bin/
-obj/
+# Ignore build directories
+**/bin/
+**/obj/
 
 # MonoGame Content Pipeline cache and output
-Content/bin/
-Content/obj/
-Content/Content.mgcb.cache
-*.xnb
-
-# Visual Studio Code settings
-.vscode/
+**/Content/bin/
+**/Content/obj/
+**/Content/*.mgcb.cache
+**/*.xnb
 
 # User-specific files
 *.user
+*.userosscache
 *.suo
-*.userprefs
+*.sln.docstates
+
+# Visual Studio Code settings
+.vscode/
 
 # MacOS specific files
 .DS_Store
@@ -66,13 +67,6 @@ packages/
 *.pdb
 *.mdb
 
-# Resharper files
-_ReSharper*/
-*.[Rr]e[Ss]harper
-
-# Coverage reports
-coverage/
-
 # Temporary files
 *.tmp
 *.bak
@@ -80,11 +74,35 @@ coverage/
 *~
 
 # Ignore compiled font files
-Content/**/*.spritefont.xnb
+**/Content/**/*.spritefont.xnb
 
 # Ignore compiled shader files
-Content/**/*.fx.xnb
+**/Content/**/*.fx.xnb
 
 # Ignore compiled model files
-Content/**/*.fbx.xnb
-Content/**/*.obj.xnb
+**/Content/**/*.fbx.xnb
+**/Content/**/*.obj.xnb
+
+# Resharper files
+_ReSharper*/
+*.DotSettings.user
+*.ReSharper
+
+# Visual Studio 2019 database files
+.vs/
+
+# Test Results
+TestResults/
+
+# Coverlet Coverage Reports
+coverage.opencover.xml
+coverage.cobertura.xml
+
+# Other IDE specific files
+*.sln.ide
+*.sln.ide.shared
+
+# JetBrains Rider temp files
+.idea/
+*.iml
+``​⬤
