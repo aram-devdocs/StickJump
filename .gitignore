@@ -106,3 +106,54 @@ coverage.cobertura.xml
 .idea/
 *.iml
 ``​⬤
+
+
+# Ignore build output folders for all .NET projects
+bin/
+obj/
+Debug/
+Release/
+.vscode/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# MonoGame specific (for GameClient)
+# Ignore MonoGame cache files and intermediate content
+/GameClient/Content/obj/
+/GameClient/Content/bin/
+/GameClient/Content/Content.mgcb.cache
+
+# Ignore NuGet packages
+*.nupkg
+*.snupkg
+
+# Ignore Visual Studio generated files
+.vs/
+/_ReSharper.Caches/
+/.idea/
+/GameClient/.vs/
+/GameServer/.vs/
+/GameShared/.vs/
+
+# Rider IDE files
+.idea/
+/*.sln.iml
+
+# Ignore build logs
+*.log
+
+# Ignore test results
+TestResults/
+
+# Ignore build artifacts
+/GameClient/bin/
+/GameClient/obj/
+/GameServer/bin/
+/GameServer/obj/
+/GameShared/bin/
+/GameShared/obj/
