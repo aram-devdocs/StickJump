@@ -138,7 +138,7 @@ namespace GameServer
             _gameState.Obstacles.RemoveAll(o => o.Position.X < -50);
 
             // Add new obstacle if needed
-            if (_gameState.Obstacles.Count == 0 || _gameState.Obstacles[_gameState.Obstacles.Count - 1].Position.X < 400)
+            if (_gameState.Obstacles.Count == 0 || _gameState.Obstacles[^1].Position.X < 600)
             {
                 _gameState.Obstacles.Add(new Obstacle
                 {
@@ -174,9 +174,48 @@ namespace GameServer
 
                 // Reset jumping state
                 player.IsJumping = false;
+
+                // Increment player's score
+                player.CurrentScore += 1;
+
+                // Update max score if needed
+                if (player.CurrentScore > player.MaxScore)
+                {
+                    player.MaxScore = player.CurrentScore;
+                }
+            }
+
+            // Check for collisions
+            CheckCollisions();
+        }
+
+        private static void CheckCollisions()
+        {
+            foreach (var player in _gameState.Players.Values)
+            {
+                foreach (var obstacle in _gameState.Obstacles)
+                {
+                    if (IsColliding(player.Position, obstacle.Position))
+                    {
+                        // Collision detected, reset player's score
+                        player.CurrentScore = 0;
+                        // Optionally, reset player position
+                        player.Position = new Vector2(100, 300);
+                        Console.WriteLine($"Player {player.PlayerId} collided with an obstacle.");
+                        break; // No need to check other obstacles
+                    }
+                }
             }
         }
 
+        private static bool IsColliding(Vector2 playerPosition, Vector2 obstaclePosition)
+        {
+            // Simple collision detection based on bounding boxes
+            Rectangle playerRect = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, 50, 50);
+            Rectangle obstacleRect = new Rectangle((int)obstaclePosition.X, (int)obstaclePosition.Y, 50, 50);
+
+            return playerRect.Intersects(obstacleRect);
+        }
         private static void BroadcastGameState()
         {
             string gameStateJson = Serializer.Serialize(_gameState);

@@ -1,0 +1,90 @@
+# Build directories
+bin/
+obj/
+
+# MonoGame Content Pipeline cache and output
+Content/bin/
+Content/obj/
+Content/Content.mgcb.cache
+*.xnb
+
+# Visual Studio Code settings
+.vscode/
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+
+# MacOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Logs
+*.log
+
+# NuGet Packages
+*.nupkg
+packages/
+
+# Rider project files
+.idea/
+*.sln.iml
+
+# MonoDevelop
+*.pidb
+*.userprefs
+
+# Visual Studio for Mac cache
+*.cache
+*.resource
+
+# Build artifacts
+*.dll
+*.exe
+*.exe.config
+*.pdb
+*.mdb
+
+# Resharper files
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# Coverage reports
+coverage/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Ignore compiled font files
+Content/**/*.spritefont.xnb
+
+# Ignore compiled shader files
+Content/**/*.fx.xnb
+
+# Ignore compiled model files
+Content/**/*.fbx.xnb
+Content/**/*.obj.xnb

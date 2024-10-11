@@ -15,6 +15,10 @@ namespace GameShared
         public int PlayerId { get; set; }
         public Vector2 Position { get; set; }
         public bool IsJumping { get; set; }
+
+        // Add these properties
+        public int CurrentScore { get; set; }
+        public int MaxScore { get; set; }
     }
 
     public class Obstacle
