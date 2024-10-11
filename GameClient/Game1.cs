@@ -1,13 +1,14 @@
-﻿// GameClient/Game1.cs
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Audio;
 using System;
 using System.Net.Sockets;
 using System.Threading;
 using GameShared;
 using System.Text;
 using System.IO;
+using System.Collections.Generic;
 
 namespace GameClient
 {
@@ -28,19 +29,23 @@ namespace GameClient
         private volatile bool _keepRunning = true;
 
         // Textures
-        private Texture2D _playerTexture;
-        private Texture2D _obstacleTexture;
-
-        // Add at the top of the class
+        private Texture2D _backgroundTexture;
+        private Texture2D _baseTexture;
+        private Texture2D _pipeTexture;
+        private Dictionary<string, Texture2D> _birdTextures;
         private SpriteFont _font;
         private Vector2 _scoreTablePosition = new Vector2(600, 10); // Top-right corner
+
+        // Animation
+        private double _animationTimer;
+        private int _animationFrame;
 
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            Window.Title = "Stick Man Game";
+            Window.Title = "Flappy Bird Multiplayer";
         }
 
         protected override void Initialize()
@@ -75,15 +80,17 @@ namespace GameClient
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // Load textures
-            _playerTexture = new Texture2D(GraphicsDevice, 50, 50);
-            Color[] playerData = new Color[50 * 50];
-            for (int i = 0; i < playerData.Length; ++i) playerData[i] = Color.Blue;
-            _playerTexture.SetData(playerData);
+            _backgroundTexture = Content.Load<Texture2D>("sprites/background-day");
+            _baseTexture = Content.Load<Texture2D>("sprites/base");
+            _pipeTexture = Content.Load<Texture2D>("sprites/pipe-green");
 
-            _obstacleTexture = new Texture2D(GraphicsDevice, 50, 50);
-            Color[] obstacleData = new Color[50 * 50];
-            for (int i = 0; i < obstacleData.Length; ++i) obstacleData[i] = Color.Red;
-            _obstacleTexture.SetData(obstacleData);
+            // Load bird textures
+            _birdTextures = new Dictionary<string, Texture2D>
+            {
+                { "yellow", Content.Load<Texture2D>("sprites/yellowbird-midflap") },
+                { "blue", Content.Load<Texture2D>("sprites/bluebird-midflap") },
+                { "red", Content.Load<Texture2D>("sprites/redbird-midflap") }
+            };
 
             // Load font
             _font = Content.Load<SpriteFont>("Default");
@@ -119,6 +126,14 @@ namespace GameClient
             {
                 Console.WriteLine($"Error sending data to server: {ex.Message}");
                 Exit();
+            }
+
+            // Update animation
+            _animationTimer += gameTime.ElapsedGameTime.TotalMilliseconds;
+            if (_animationTimer > 200) // Change frame every 200ms
+            {
+                _animationFrame = (_animationFrame + 1) % 3;
+                _animationTimer = 0;
             }
 
             base.Update(gameTime);
@@ -184,17 +199,41 @@ namespace GameClient
             {
                 _spriteBatch.Begin();
 
-                // Draw obstacles
+                // Draw background
+                _spriteBatch.Draw(_backgroundTexture, Vector2.Zero, Color.White);
+
+                // Draw pipes
                 foreach (var obstacle in _gameState.Obstacles)
                 {
-                    _spriteBatch.Draw(_obstacleTexture, obstacle.Position, Color.White);
+                    // Upper pipe
+                    _spriteBatch.Draw(
+                        _pipeTexture,
+                        new Rectangle((int)obstacle.Position.X, (int)(obstacle.Position.Y - 75 - 320), 52, 320),
+                        null,
+                        Color.White,
+                        0,
+                        Vector2.Zero,
+                        SpriteEffects.FlipVertically,
+                        0);
+
+                    // Lower pipe
+                    _spriteBatch.Draw(
+                        _pipeTexture,
+                        new Vector2(obstacle.Position.X, obstacle.Position.Y + 75),
+                        Color.White);
                 }
+
+                // Draw base
+                _spriteBatch.Draw(_baseTexture, new Vector2(0, 512 - 112), Color.White);
 
                 // Draw players
                 foreach (var player in _gameState.Players.Values)
                 {
-                    Color color = (player.PlayerId == _playerId) ? Color.Green : Color.Gray;
-                    _spriteBatch.Draw(_playerTexture, player.Position, color);
+                    // Determine bird texture
+                    Texture2D birdTexture = _birdTextures[player.Color];
+
+                    // Apply animation frames if desired
+                    _spriteBatch.Draw(birdTexture, player.Position, Color.White);
                 }
 
                 // Draw score table
@@ -211,16 +250,24 @@ namespace GameClient
             // Prepare the score table text
             StringBuilder scoreText = new StringBuilder();
             scoreText.AppendLine("Scores:");
-            scoreText.AppendLine("Player  Score  Max");
+            scoreText.AppendLine("Player\tScore\tMax");
 
             foreach (var player in _gameState.Players.Values)
             {
                 string playerIndicator = (player.PlayerId == _playerId) ? "*" : "";
-                scoreText.AppendLine($"{playerIndicator}{player.PlayerId}      {player.CurrentScore}      {player.MaxScore}");
+                scoreText.AppendLine($"{playerIndicator}{player.PlayerId}\t{player.CurrentScore}\t{player.MaxScore}");
             }
 
             // Draw the text
             _spriteBatch.DrawString(_font, scoreText.ToString(), _scoreTablePosition, Color.Black);
+        }
+
+        private void OnGameExiting(object sender, EventArgs args)
+        {
+            // Cleanup
+            _keepRunning = false;
+            _client?.Close();
+            _receiveThread?.Join();
         }
         protected override void OnExiting(object sender, ExitingEventArgs args)
         {

@@ -26,3 +26,4 @@
 /Users/aramhammoudeh/dev/game/StickJump/GameServer/obj/Debug/net8.0/GameServer.pdb
 /Users/aramhammoudeh/dev/game/StickJump/GameServer/obj/Debug/net8.0/GameServer.genruntimeconfig.cache
 /Users/aramhammoudeh/dev/game/StickJump/GameServer/obj/Debug/net8.0/ref/GameServer.dll
+/Users/aramhammoudeh/dev/game/StickJump/GameServer/obj/Debug/net8.0/GameServer.sourcelink.json

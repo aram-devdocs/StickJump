@@ -1,5 +1,4 @@
-﻿// GameServer/Program.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -18,6 +17,8 @@ namespace GameServer
         private static GameState _gameState = new GameState();
         private static int _nextPlayerId = 1;
         private static object _lock = new object();
+
+        private static readonly string[] BirdColors = { "yellow", "blue", "red" };
 
         static void Main(string[] args)
         {
@@ -47,12 +48,18 @@ namespace GameServer
                 int playerId = _nextPlayerId++;
                 lock (_lock)
                 {
+                    // Assign a color to the player
+                    string color = BirdColors[(playerId - 1) % BirdColors.Length];
+
                     _clients.Add(playerId, client);
                     _gameState.Players.Add(playerId, new PlayerState
                     {
                         PlayerId = playerId,
                         Position = new Vector2(100, 300),
-                        IsJumping = false
+                        IsJumping = false,
+                        CurrentScore = 0,
+                        MaxScore = 0,
+                        Color = color
                     });
                 }
                 Console.WriteLine($"Player {playerId} connected.");
@@ -126,23 +133,29 @@ namespace GameServer
 
         private static void UpdateGameState()
         {
-            // Update obstacles
+            // Update obstacles (pipes)
             foreach (var obstacle in _gameState.Obstacles)
             {
                 var position = obstacle.Position;
-                position.X -= 5f; // Move obstacle to the left
+                position.X -= 2f; // Move pipe to the left
                 obstacle.Position = position;
             }
 
             // Remove off-screen obstacles
-            _gameState.Obstacles.RemoveAll(o => o.Position.X < -50);
+            _gameState.Obstacles.RemoveAll(o => o.Position.X < -100);
 
             // Add new obstacle if needed
-            if (_gameState.Obstacles.Count == 0 || _gameState.Obstacles[^1].Position.X < 600)
+            if (_gameState.Obstacles.Count == 0 || _gameState.Obstacles[^1].Position.X < 400)
             {
+                // Randomize pipe gap position
+                Random rand = new Random();
+                int gapY = rand.Next(150, 350);
+
+                // Add upper and lower pipes as a single obstacle for simplicity
                 _gameState.Obstacles.Add(new Obstacle
                 {
-                    Position = new Vector2(800, 300)
+                    Position = new Vector2(800, gapY),
+                    Passed = false
                 });
             }
 
@@ -153,21 +166,21 @@ namespace GameServer
 
                 if (player.IsJumping)
                 {
-                    position.Y -= 10f; // Move up
+                    position.Y -= 5f; // Move up
                 }
                 else
                 {
-                    position.Y += 5f; // Apply gravity
+                    position.Y += 2f; // Apply gravity
                 }
 
                 // Clamp position
-                if (position.Y > 300)
+                if (position.Y > 480) // Bottom of the screen
                 {
-                    position.Y = 300;
+                    position.Y = 480;
                 }
-                if (position.Y < 200)
+                if (position.Y < 0) // Top of the screen
                 {
-                    position.Y = 200;
+                    position.Y = 0;
                 }
 
                 player.Position = position;
@@ -175,47 +188,57 @@ namespace GameServer
                 // Reset jumping state
                 player.IsJumping = false;
 
-                // Increment player's score
-                player.CurrentScore += 1;
-
-                // Update max score if needed
-                if (player.CurrentScore > player.MaxScore)
+                // Check for collisions
+                if (CheckCollisions(player))
                 {
-                    player.MaxScore = player.CurrentScore;
+                    // Collision detected, reset player's score
+                    player.CurrentScore = 0;
+                    // Reset player position
+                    player.Position = new Vector2(100, 300);
+                    Console.WriteLine($"Player {player.PlayerId} collided with an obstacle.");
                 }
-            }
-
-            // Check for collisions
-            CheckCollisions();
-        }
-
-        private static void CheckCollisions()
-        {
-            foreach (var player in _gameState.Players.Values)
-            {
-                foreach (var obstacle in _gameState.Obstacles)
+                else
                 {
-                    if (IsColliding(player.Position, obstacle.Position))
+                    // Increment player's score when passing obstacles
+                    foreach (var obstacle in _gameState.Obstacles)
                     {
-                        // Collision detected, reset player's score
-                        player.CurrentScore = 0;
-                        // Optionally, reset player position
-                        player.Position = new Vector2(100, 300);
-                        Console.WriteLine($"Player {player.PlayerId} collided with an obstacle.");
-                        break; // No need to check other obstacles
+                        if (!obstacle.Passed && obstacle.Position.X < player.Position.X)
+                        {
+                            obstacle.Passed = true;
+                            player.CurrentScore += 1;
+
+                            // Update max score if needed
+                            if (player.CurrentScore > player.MaxScore)
+                            {
+                                player.MaxScore = player.CurrentScore;
+                            }
+                        }
                     }
                 }
             }
         }
 
-        private static bool IsColliding(Vector2 playerPosition, Vector2 obstaclePosition)
+        private static bool CheckCollisions(PlayerState player)
         {
-            // Simple collision detection based on bounding boxes
-            Rectangle playerRect = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, 50, 50);
-            Rectangle obstacleRect = new Rectangle((int)obstaclePosition.X, (int)obstaclePosition.Y, 50, 50);
+            foreach (var obstacle in _gameState.Obstacles)
+            {
+                // Define bird rectangle
+                Rectangle birdRect = new Rectangle((int)player.Position.X, (int)player.Position.Y, 34, 24); // Bird sprite size
 
-            return playerRect.Intersects(obstacleRect);
+                // Define upper pipe rectangle
+                Rectangle upperPipeRect = new Rectangle((int)obstacle.Position.X, 0, 52, (int)obstacle.Position.Y - 75);
+
+                // Define lower pipe rectangle
+                Rectangle lowerPipeRect = new Rectangle((int)obstacle.Position.X, (int)obstacle.Position.Y + 75, 52, 600 - ((int)obstacle.Position.Y + 75));
+
+                if (birdRect.Intersects(upperPipeRect) || birdRect.Intersects(lowerPipeRect))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
+
         private static void BroadcastGameState()
         {
             string gameStateJson = Serializer.Serialize(_gameState);

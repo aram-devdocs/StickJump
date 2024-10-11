@@ -1,4 +1,3 @@
-// GameShared/GameModels.cs
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
@@ -19,11 +18,15 @@ namespace GameShared
         // Add these properties
         public int CurrentScore { get; set; }
         public int MaxScore { get; set; }
+
+        // New property for player color
+        public string Color { get; set; }
     }
 
     public class Obstacle
     {
         public Vector2 Position { get; set; }
+        public bool Passed { get; set; } // To track scoring
     }
 
     public class GameState

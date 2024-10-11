@@ -10,3 +10,4 @@
 /Users/aramhammoudeh/dev/game/StickJump/GameShared/obj/Debug/net8.0/refint/GameShared.dll
 /Users/aramhammoudeh/dev/game/StickJump/GameShared/obj/Debug/net8.0/GameShared.pdb
 /Users/aramhammoudeh/dev/game/StickJump/GameShared/obj/Debug/net8.0/ref/GameShared.dll
+/Users/aramhammoudeh/dev/game/StickJump/GameShared/obj/Debug/net8.0/GameShared.sourcelink.json
